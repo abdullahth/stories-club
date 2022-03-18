@@ -1,10 +1,27 @@
 const express = require('express')
 const models = require('../plugins/models')
-
+const Images = require('../plugins/images')
+const Assets = require('../plugins/assets')
 const router = express.Router()
+const fs = require('fs')
+const base64ToImage = require('base64-to-image')
+const base64ToFile = require('base64-to-file')
+const logMsg = (msg) => `[Videos Router] ${msg}`
 
+const multer = require('multer')
+const storage = multer.diskStorage({
+    destination: (req, file, cb) => {
+	console.log(file.filename)
+        cb(null, "./assetsDatabase/audios/")
+    },
+    filename: (req, file, cb) => {
+	console.log(file.filename)
+        cb(null, `${file.originalname}`)
+    }
+})
 
-const logMsg = (msg) => `[Videos Router] ${error}`
+const upload = multer({ storage: storage })
+
 
 
 const Plugins = {
@@ -50,11 +67,63 @@ const Plugins = {
 }
 
 
+router.post('/:id/assets/upload', async function (req, res) {
+    try {
+        const filename = req.body.filename
+        const base64url = req.body.base64url
+        fs.writeFile(`./assetsDatabase/videos/assets/${filename}`, base64url, { encoding: 'base64' }, () => console.log('Create'))
+
+        return res.status(200).json({ msg: logMsg('Uploaded') })
+
+    } catch (error) {
+        console.log(error)
+        return res.status(500)
+    }
+
+})
+
+
+
+router.post('/:id/images/cover', async function (req, res) {
+    try {
+        const filename = req.body.filename
+        const base64url = req.body.base64url
+        fs.writeFile(`./assetsDatabase/videos/covers/${filename}`, base64url, { encoding: 'base64' }, () => console.log('Create'))
+
+        return res.status(200).json({ msg: logMsg('Uploaded') })
+
+    } catch (error) {
+        console.log(error)
+        return res.status(500)
+    }
+
+})
+
+
+
+
+router.get('/asset/:id', async (req, res) => {
+    try {
+
+        const _file = Assets.getAssetByFilePath('videos',  req.params.id)
+        console.log(_file)
+
+        res.set({
+            'content-type': "video/mp4",
+        })
+        res.sendFile(_file.path, _file.options)
+    } catch (e) {
+        console.log(`${e}`)
+        return res.status(404).json({ msg: logMsg(`Image Not found!`) })
+    }
+})
+
+
 
 
 router.get('/', async (req, res) => {
     try {
-        const videos = await models.Video.find({})
+        const videos = await models.Video.find({}).sort({ likers: -1 })
         if (!videos) {
             return res.status(404).json({ msg: logMsg('video not fount') })
         }
@@ -69,7 +138,20 @@ router.get('/', async (req, res) => {
 })
 
 
+router.get('/covers/:id', async (req, res) => {
+    try {
+	console.log(req.params.id)
+        const _file = Images.getImageByFilePath('videos',  req.params.id)
 
+        res.set({
+            'content-type': "image/jpg",
+        })
+        res.sendFile(_file.path, _file.options)
+    } catch (e) {
+        console.log(`${e}`)
+        return res.status(404).json({ msg: logMsg(`Image Not found!`) })
+    }
+})
 
 
 router.get('/userId=:id', Plugins.getVideosByUserId, (req, res) => {
@@ -85,12 +167,14 @@ router.get('/id=:id', Plugins.getVideoWithId, (req, res) => {
 
 router.post('/', async (req, res) => {
     try {
-        const { title, desc, book, ph, category, parts, publisher } = req.body
+	console.log(req.body)
+        const { title, desc, book, ph, category, parts, publisher, ref } = JSON.parse(req.body)
 
         let video = models.Video({
             title: title, desc: desc, book: book,
             ph: ph, category: category, parts: parts, publisher: publisher,
-            likers: [], comments: [], publishedIn: Date.now()
+            likers: [], comments: [], publishedIn: Date.now(),
+		ref: ref
         })
         video = await video.save()
 

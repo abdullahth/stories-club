@@ -13,12 +13,7 @@ module.exports = mongoose.model('Book', mongoose.Schema({
     depositNumber: {
         type: String,
     },
-    ph: {
-        type: String, required: true
-    },
-    numOfChapters: {
-        type: Number, required: true
-    },
+    ph: String, 
     category: {
         type: Number, required: true
     },
@@ -27,9 +22,6 @@ module.exports = mongoose.model('Book', mongoose.Schema({
     },
     publishingDate: {
         type: Date, required: true, default: Date.now()
-    },
-    chapters: {
-        type: Array, required: true
     },
     likers: {
         type: [], required: true, default: []

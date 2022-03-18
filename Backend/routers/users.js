@@ -1,7 +1,7 @@
 const express = require('express')
 const { model } = require('mongoose')
 const models = require('../plugins/models')
-
+const Images = require('../plugins/images')
 const logMsg = (msg) => `[users Router] ${msg}`
 const router = express.Router()
 
@@ -45,6 +45,83 @@ const Plugins = {
 
 }
 
+
+router.post('/:id/cover/upload', async function (req, res) {
+    try {
+        const filename = req.body.filename
+        const base64url = req.body.base64url
+        fs.writeFile(`./assetsDatabase/users/covers/${filename}`, base64url, { encoding: 'base64' }, () => console.log('Create'))
+
+        return res.status(200).json({ msg: logMsg('Uploaded') })
+
+    } catch (error) {
+        console.log(error)
+        return res.status(500)
+    }
+
+})
+
+
+
+
+router.post('/:id/image/upload', async function (req, res) {
+    try {
+        const filename = req.body.filename
+        const base64url = req.body.base64url
+        fs.writeFile(`./assetsDatabase/users/images/${filename}`, base64url, { encoding: 'base64' }, () => console.log('Create'))
+
+        return res.status(200).json({ msg: logMsg('Uploaded') })
+
+    } catch (error) {
+        console.log(error)
+        return res.status(500)
+    }
+
+})
+
+
+router.get('/cover/:id', async (req, res) => {
+    try {
+        const _file = Images.getUsersImageByFilePath('users','covers', req.params.id)
+        res.set({
+            'content-type': "image/jpg",
+        })
+        res.sendFile(_file.path, _file.options)
+    } catch (e) {
+        console.log(`${e}`)
+        return res.status(404).json({ msg: logMsg(`Image Not found!`) })
+    }
+})
+
+
+router.get('/image/:id', async (req, res) => {
+    try {
+        const _file = Images.getUsersImageByFilePath('users','images', req.params.id)
+        res.set({
+            'content-type': "image/jpg",
+        })
+        res.sendFile(_file.path, _file.options)
+    } catch (e) {
+        console.log(`${e}`)
+        return res.status(404).json({ msg: logMsg(`Image Not found!`) })
+    }
+})
+
+
+router.get('/id=:id/likes', async (req, res) => {
+	try{
+		const id = req.params.id
+		const audios = await models.Audio.find({ likers: id })
+		const videos = await models.Video.find({ likers: id })
+		const books = await models.Book.find({ likers: id })
+		
+		return res.status(200).json({ audios: audios, videos: videos, books: books})
+	} catch (error) {
+	        console.log(logMsg(error))
+        	return res.status(500).json({ msg: logMsg(error) })
+	    }
+
+})
 
 
 router.get('/', async (req, res) => {

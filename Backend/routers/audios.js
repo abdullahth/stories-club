@@ -1,12 +1,27 @@
 const express = require('express')
 const models = require('../plugins/models')
-
+const Images = require('../plugins/images')
+const Assets = require('../plugins/assets')
 const router = express.Router()
 const logMsg = (msg) => `[Audios Router] ${msg}`
 const fs = require('fs')
+const base64ToImage = require('base64-to-image')
+const base64ToFile = require('base64-to-file')
+
 
 const multer = require('multer')
-var upload = multer({ dest: 'uploads/' })
+const storage = multer.diskStorage({
+    destination: (req, file, cb) => {
+	console.log(file.filename)
+        cb(null, "./assetsDatabase/audios/")
+    },
+    filename: (req, file, cb) => {
+	console.log(file.filename)
+        cb(null, `${file.originalname}`)
+    }
+})
+
+const upload = multer({ storage: storage })
 
 const Plugins = {
     getAudioWithId: async (req, res, next) => {
@@ -51,18 +66,13 @@ const Plugins = {
 }
 
 
-router.post('/:id/images/cover', upload.single("picture"), async function (req, res) {
+router.post('/:id/assets/upload', async function (req, res) {
     try {
+        const filename = req.body.filename
+        const base64url = req.body.base64url
+        fs.writeFile(`./assetsDatabase/audios/assets/${filename}`, base64url, { encoding: 'base64' }, () => console.log('Create'))
 
-        var src = fs.createReadStream(req.file.path);
-        var dest = fs.createWriteStream('imagesDatabase/products/' + req.file.originalname);
-        src.pipe(dest);
-        src.on('end', function () {
-            fs.unlinkSync(req.file.path);
-            res.json('OK: received ' + req.file.originalname);
-        });
-        src.on('error', function (err) { res.json('Something went wrong!'); });
-
+        return res.status(200).json({ msg: logMsg('Uploaded') })
 
     } catch (error) {
         console.log(error)
@@ -72,9 +82,59 @@ router.post('/:id/images/cover', upload.single("picture"), async function (req, 
 })
 
 
+
+router.post('/:id/images/cover', async function (req, res) {
+    try {
+        const filename = req.body.filename
+        const base64url = req.body.base64url
+        fs.writeFile(`./assetsDatabase/audios/covers/${filename}`, base64url, { encoding: 'base64' }, () => console.log('Create'))
+
+        return res.status(200).json({ msg: logMsg('Uploaded') })
+
+    } catch (error) {
+        console.log(error)
+        return res.status(500)
+    }
+
+})
+
+
+router.get('/asset/:id', async (req, res) => {
+    try {
+
+        const _file = Assets.getAssetByFilePath('audios', req.params.id)
+        console.log(_file)
+
+        res.set({
+            'content-type': "image/jpg",
+        })
+        res.sendFile(_file.path, _file.options)
+    } catch (e) {
+        console.log(`${e}`)
+        return res.status(404).json({ msg: logMsg(`Image Not found!`) })
+    }
+})
+
+
+router.get('/covers/:id', async (req, res) => {
+    try {
+
+        const _file = Images.getImageByFilePath('audios', req.params.id)
+
+        res.set({
+            'content-type': "image/jpg",
+        })
+        res.sendFile(_file.path, _file.options)
+    } catch (e) {
+        console.log(`${e}`)
+        return res.status(404).json({ msg: logMsg(`Image Not found!`) })
+    }
+})
+
+
 router.get('/', async (req, res) => {
     try {
-        const audios = await models.Audio.find({})
+        const audios = await models.Audio.find({}).sort({ likers: -1 })
         if (!audios) {
             return res.status(404).json({ msg: logMsg('Audio not fount') })
         }
@@ -103,7 +163,7 @@ router.get('/id=:id', Plugins.getAudioWithId, (req, res) => {
 
 router.post('/', async (req, res) => {
     try {
-	    console.log(req.body)
+        console.log(req.body)
         const { title, desc, book, ph, category, parts, publisher } = req.body
 
         let audio = models.Audio({
@@ -113,7 +173,7 @@ router.post('/', async (req, res) => {
         })
         audio = await audio.save()
 
-	    console.log(audio._id)
+        console.log(audio._id)
         return res.status(201).json({
             audioId: audio._id, audio: audio
         })

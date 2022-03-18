@@ -10,15 +10,8 @@ module.exports = mongoose.model('Video', mongoose.Schema({
     publisher: {
         type: String, required: true
     },
-    book: {
-        type: String, required: true
-    },
-    ref: {
-        type: String, required: true,
-    },
-    ph: {
-        type: String, required: true
-    },
+    book: String,
+    ph: String,
     publishedIn: {
         type: Date, required: true, default: Date.now()
     },

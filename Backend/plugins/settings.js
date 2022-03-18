@@ -1,5 +1,7 @@
 const express = require('express')
 const bodyParser = require('body-parser')
+const cors = require('cors')
+
 
 module.exports = (application) => {
     // Cors Handling
@@ -15,9 +17,14 @@ module.exports = (application) => {
         next()
     })
 
-
-
-	application.use(express.json())
-	application.use(bodyParser())
+	application.use(cors())
+	application.use("*", cors())
+	application.use(express.json({ limit: '250mb' }))
+	application.use(bodyParser.json({ limit: '250mb' }))
+	application.use(bodyParser.json({
+		limit: '250mb',
+		extended: true, 
+	}))
+	application.use(bodyParser.text({ limit: '250mb' }))
 
 }

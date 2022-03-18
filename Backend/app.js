@@ -15,8 +15,8 @@ const config = require('./config')
 const routerRegistration = require('./plugins/routerReg')
 
 const application = express()
+
 // Register Plugins
-application.use(express.json())
 const settingsInitialization = require('./plugins/settings')
 settingsInitialization(application)
 

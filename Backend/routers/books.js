@@ -1,8 +1,27 @@
 const express = require('express')
 const models = require('../plugins/models')
-
 const router = express.Router()
-const logMsg = (msg) => `[Books Router] ${error}`
+const Images = require('../plugins/images')
+const Assets = require('../plugins/assets')
+
+const logMsg = (msg) => `[Books Router] ${msg}`
+const fs = require('fs')
+const base64ToImage = require('base64-to-image')
+const base64ToFile = require('base64-to-file')
+
+const multer = require('multer')
+const storage = multer.diskStorage({
+    destination: (req, file, cb) => {
+	console.log(file.filename)
+        cb(null, "./assetsDatabase/audios/")
+    },
+    filename: (req, file, cb) => {
+	console.log(file.filename)
+        cb(null, `${file.originalname}`)
+    }
+})
+
+const upload = multer({ storage: storage })
 
 const Plugins = {
     getBookWithId: async (req, res, next) => {
@@ -47,6 +66,74 @@ const Plugins = {
 }
 
 
+router.post('/:id/assets/upload', async function (req, res) {
+    try {
+        const filename = req.body.filename
+        const base64url = req.body.base64url
+        fs.writeFile(`./assetsDatabase/books/assets/${filename}`, base64url, { encoding: 'base64' }, () => console.log('Create'))
+
+        return res.status(200).json({ msg: logMsg('Uploaded') })
+
+    } catch (error) {
+        console.log(error)
+        return res.status(500)
+    }
+
+})
+
+
+
+router.post('/:id/images/cover', async function (req, res) {
+    try {
+        const filename = req.body.filename
+        const base64url = req.body.base64url
+        fs.writeFile(`./assetsDatabase/books/covers/${filename}`, base64url, { encoding: 'base64' }, () => console.log('Create'))
+
+        return res.status(200).json({ msg: logMsg('Uploaded') })
+
+    } catch (error) {
+        console.log(error)
+        return res.status(500)
+    }
+
+})
+
+
+router.get('/asset/:id', async (req, res) => {
+    try {
+
+        const _file = Assets.getAssetByFilePath('books',  req.params.id)
+        console.log(_file)
+
+        res.set({
+            'content-type': "application/pdf",
+        })
+        res.sendFile(_file.path, _file.options)
+    } catch (e) {
+        console.log(`${e}`)
+        return res.status(404).json({ msg: logMsg(`Image Not found!`) })
+    }
+})
+
+
+
+router.get('/covers/:id', async (req, res) => {
+    try {
+	console.log(req.params.id)
+        const _file = Images.getImageByFilePath('books',  req.params.id)
+
+        res.set({
+            'content-type': "image/jpg",
+        })
+        res.sendFile(_file.path, _file.options)
+    } catch (e) {
+        console.log(`${e}`)
+        return res.status(404).json({ msg: logMsg(`Image Not found!`) })
+    }
+})
+
+
+
 
 router.get('/userId=:id', Plugins.getBooksByUserId, (req, res) => {
     return res.status(200).json({ books: res.books })
@@ -56,12 +143,13 @@ router.get('/userId=:id', Plugins.getBooksByUserId, (req, res) => {
 
 router.get('/', async (req, res) => {
     try {
-        const books = await models.Book.find({})
+        const books = await models.Book.find({}).sort({ likers: -1 })
         if (!books) {
             return res.status(404).json({ msg: logMsg('Book not fount') })
         }
 
 
+	console.log(books.length)
         return res.status(200).json({ books: books })
 
     } catch (error) {
@@ -81,11 +169,11 @@ router.get('/id=:id', Plugins.getBookWithId, (req, res) => {
 
 router.post('/', async (req, res) => {
     try {
-        const { title, desc, ph, chapters, publisher, depositNumber, isin, category } = req.body
+        const { title, desc, ph, publisher, depositNumber, isin, category } = JSON.parse(req.body)
 
         let book = models.Book({
             title: title, desc: desc,
-            ph: ph, category: category, chapters: chapters, publisher: publisher, numOfChapters: chapters.length,
+            ph: ph, category: category, publisher: publisher,
             likers: [], comments: [], publishingDate: Date.now(), depositNumber: depositNumber, isin: isin
         })
         book = await book.save()
